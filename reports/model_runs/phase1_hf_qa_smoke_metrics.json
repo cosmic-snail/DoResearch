@@ -1,0 +1,20 @@
+{
+  "device": "cpu",
+  "doc_stride": 32,
+  "eval_features": 263,
+  "eval_metrics": {
+    "epoch": 0.0005747126436781609,
+    "eval_loss": 4.8943939208984375,
+    "eval_runtime": 0.2367,
+    "eval_samples_per_second": 1111.313,
+    "eval_steps_per_second": 557.769
+  },
+  "eval_records": 2,
+  "max_seq_length": 128,
+  "max_steps": 1,
+  "model_name": "hf-internal-testing/tiny-random-roberta",
+  "torch_version": "2.12.0",
+  "train_features": 3480,
+  "train_loss": 4.8744282722473145,
+  "train_records": 4
+}

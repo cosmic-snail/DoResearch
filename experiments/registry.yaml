@@ -45,3 +45,18 @@ experiments:
     results_output: "reports/tables/phase1_null_baseline_test_results.json"
     commands:
       run: "PYTHONPATH=src python3 -m rulex.cli.null_baseline data/processed/ruleframe/cuad_test.jsonl outputs/phase1_null_baseline_test/predictions.jsonl reports/tables/phase1_null_baseline_test_results.json"
+  phase1_hf_qa_smoke:
+    description: "One-step HuggingFace QA training smoke test with a tiny RoBERTa model."
+    train_input: "data/processed/ruleframe/cuad_train.jsonl"
+    eval_input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/phase1_hf_qa_smoke"
+    metrics_output: "reports/model_runs/phase1_hf_qa_smoke_metrics.json"
+    commands:
+      run: "PYTHONPATH=src python3 -m rulex.cli.hf_qa_train --train data/processed/ruleframe/cuad_train.jsonl --eval data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/phase1_hf_qa_smoke --model-name hf-internal-testing/tiny-random-roberta --max-train-records 4 --max-eval-records 2 --max-seq-length 128 --doc-stride 32 --batch-size 2 --max-steps 1 --device cpu"
+  phase1_roberta_base_train:
+    description: "Full RoBERTa-base extractive QA training command for CUAD; expected to require substantial compute."
+    train_input: "data/processed/ruleframe/cuad_train.jsonl"
+    eval_input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/phase1_roberta_base"
+    commands:
+      run: "PYTHONPATH=src python3 -m rulex.cli.hf_qa_train --train data/processed/ruleframe/cuad_train.jsonl --eval data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/phase1_roberta_base --model-name roberta-base --max-seq-length 512 --doc-stride 128 --batch-size 16 --learning-rate 3e-5 --epochs 2 --device auto"

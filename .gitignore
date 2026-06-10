@@ -17,7 +17,7 @@ data/processed/
 outputs/
 runs/
 checkpoints/
-models/
+/models/
 
 # Local worktrees
 .worktrees/
