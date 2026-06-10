@@ -1,0 +1,9 @@
+[project]
+name = "do-research"
+version = "0.1.0"
+description = "Experimental framework for normative rule extraction and structured encoding."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

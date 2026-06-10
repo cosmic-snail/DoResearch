@@ -1,0 +1,10 @@
+experiments:
+  phase0_smoke:
+    description: "Convert CUAD-style JSON into RuleFrame JSONL and run oracle smoke evaluation."
+    input: "examples/cuad_sample.json"
+    ruleframe_output: "outputs/phase0_smoke/cuad_sample.ruleframe.jsonl"
+    predictions_output: "outputs/phase0_smoke/predictions.jsonl"
+    results_output: "outputs/phase0_smoke/results.json"
+    commands:
+      convert: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe examples/cuad_sample.json outputs/phase0_smoke/cuad_sample.ruleframe.jsonl"
+      smoke_eval: "PYTHONPATH=src python3 -m rulex.cli.smoke_eval outputs/phase0_smoke/cuad_sample.ruleframe.jsonl outputs/phase0_smoke/predictions.jsonl outputs/phase0_smoke/results.json"
