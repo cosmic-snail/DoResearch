@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+
+# Experiment artifacts
+data/raw/
+data/processed/
+outputs/
+runs/
+checkpoints/
+models/
+
+# Local worktrees
+.worktrees/
+worktrees/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
