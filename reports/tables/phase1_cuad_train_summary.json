@@ -1,0 +1,10 @@
+{
+  "answerable_records": 11180,
+  "avg_gold_span_chars": 264.0237924865832,
+  "documents": 408,
+  "max_gold_spans_per_record": 1,
+  "no_answer_records": 11270,
+  "records": 22450,
+  "rule_types": 41,
+  "total_gold_spans": 11180
+}

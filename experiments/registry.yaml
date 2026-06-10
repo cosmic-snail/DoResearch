@@ -21,3 +21,27 @@ experiments:
       convert: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe data/raw/cuad/CUADv1.json data/processed/ruleframe/cuad.jsonl"
       summarize: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes data/processed/ruleframe/cuad.jsonl reports/tables/phase0_cuad_summary.json"
       oracle_smoke_eval: "PYTHONPATH=src python3 -m rulex.cli.smoke_eval data/processed/ruleframe/cuad.jsonl outputs/phase0_cuad_oracle/predictions.jsonl outputs/phase0_cuad_oracle/results.json"
+  phase1_cuad_split_diagnostics:
+    description: "Prepare official CUAD train/test splits and write per-rule-type difficulty profiles."
+    train_input: "data/raw/cuad/train_separate_questions.json"
+    test_input: "data/raw/cuad/test.json"
+    train_ruleframe_output: "data/processed/ruleframe/cuad_train.jsonl"
+    test_ruleframe_output: "data/processed/ruleframe/cuad_test.jsonl"
+    train_summary_output: "reports/tables/phase1_cuad_train_summary.json"
+    test_summary_output: "reports/tables/phase1_cuad_test_summary.json"
+    train_profile_output: "reports/tables/phase1_cuad_train_rule_type_profile.csv"
+    test_profile_output: "reports/tables/phase1_cuad_test_rule_type_profile.csv"
+    commands:
+      convert_train: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe data/raw/cuad/train_separate_questions.json data/processed/ruleframe/cuad_train.jsonl"
+      convert_test: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe data/raw/cuad/test.json data/processed/ruleframe/cuad_test.jsonl"
+      summarize_train: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes data/processed/ruleframe/cuad_train.jsonl reports/tables/phase1_cuad_train_summary.json"
+      summarize_test: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes data/processed/ruleframe/cuad_test.jsonl reports/tables/phase1_cuad_test_summary.json"
+      profile_train: "PYTHONPATH=src python3 -m rulex.cli.profile_rule_types data/processed/ruleframe/cuad_train.jsonl reports/tables/phase1_cuad_train_rule_type_profile.csv"
+      profile_test: "PYTHONPATH=src python3 -m rulex.cli.profile_rule_types data/processed/ruleframe/cuad_test.jsonl reports/tables/phase1_cuad_test_rule_type_profile.csv"
+  phase1_null_baseline:
+    description: "Always predict no spans on the CUAD test split to calibrate no-answer behavior."
+    input: "data/processed/ruleframe/cuad_test.jsonl"
+    predictions_output: "outputs/phase1_null_baseline_test/predictions.jsonl"
+    results_output: "reports/tables/phase1_null_baseline_test_results.json"
+    commands:
+      run: "PYTHONPATH=src python3 -m rulex.cli.null_baseline data/processed/ruleframe/cuad_test.jsonl outputs/phase1_null_baseline_test/predictions.jsonl reports/tables/phase1_null_baseline_test_results.json"

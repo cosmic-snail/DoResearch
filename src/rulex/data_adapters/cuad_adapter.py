@@ -1,3 +1,4 @@
+import re
 from collections.abc import Iterator, Mapping
 from typing import Any
 
@@ -33,7 +34,8 @@ def convert_cuad_to_ruleframes(cuad: Mapping[str, Any]) -> Iterator[dict[str, An
 def _infer_rule_type(qa: Mapping[str, Any]) -> str:
     qa_id = str(qa.get("id", ""))
     if "__" in qa_id:
-        return qa_id.rsplit("__", maxsplit=1)[-1]
+        rule_type = qa_id.rsplit("__", maxsplit=1)[-1]
+        return re.sub(r"_\d+$", "", rule_type)
     return qa.get("question", qa_id)
 
 

@@ -54,3 +54,35 @@ def test_convert_cuad_to_ruleframes_preserves_answer_and_no_answer_cases():
     assert records[1]["metadata"]["has_answer"] is False
     assert records[1]["metadata"]["answer_count"] == 0
     assert records[1]["gold_spans"] == []
+
+
+def test_convert_cuad_to_ruleframes_strips_separate_question_suffixes():
+    context = "DISTRIBUTOR AGREEMENT"
+    cuad = {
+        "data": [
+            {
+                "title": "Agreement",
+                "paragraphs": [
+                    {
+                        "context": context,
+                        "qas": [
+                            {
+                                "id": "Agreement__Document Name_0",
+                                "question": "Highlight the document name.",
+                                "answers": [
+                                    {
+                                        "text": context,
+                                        "answer_start": 0,
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+
+    records = list(convert_cuad_to_ruleframes(cuad))
+
+    assert records[0]["rule_type"] == "Document Name"
