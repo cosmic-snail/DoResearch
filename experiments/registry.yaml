@@ -3,8 +3,21 @@ experiments:
     description: "Convert CUAD-style JSON into RuleFrame JSONL and run oracle smoke evaluation."
     input: "examples/cuad_sample.json"
     ruleframe_output: "outputs/phase0_smoke/cuad_sample.ruleframe.jsonl"
+    summary_output: "outputs/phase0_smoke/summary.json"
     predictions_output: "outputs/phase0_smoke/predictions.jsonl"
     results_output: "outputs/phase0_smoke/results.json"
     commands:
       convert: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe examples/cuad_sample.json outputs/phase0_smoke/cuad_sample.ruleframe.jsonl"
+      summarize: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes outputs/phase0_smoke/cuad_sample.ruleframe.jsonl outputs/phase0_smoke/summary.json"
       smoke_eval: "PYTHONPATH=src python3 -m rulex.cli.smoke_eval outputs/phase0_smoke/cuad_sample.ruleframe.jsonl outputs/phase0_smoke/predictions.jsonl outputs/phase0_smoke/results.json"
+  phase0_cuad_full:
+    description: "Convert the official CUADv1.json into RuleFrame JSONL and summarize the full corpus."
+    input: "data/raw/cuad/CUADv1.json"
+    ruleframe_output: "data/processed/ruleframe/cuad.jsonl"
+    summary_output: "reports/tables/phase0_cuad_summary.json"
+    predictions_output: "outputs/phase0_cuad_oracle/predictions.jsonl"
+    results_output: "outputs/phase0_cuad_oracle/results.json"
+    commands:
+      convert: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe data/raw/cuad/CUADv1.json data/processed/ruleframe/cuad.jsonl"
+      summarize: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes data/processed/ruleframe/cuad.jsonl reports/tables/phase0_cuad_summary.json"
+      oracle_smoke_eval: "PYTHONPATH=src python3 -m rulex.cli.smoke_eval data/processed/ruleframe/cuad.jsonl outputs/phase0_cuad_oracle/predictions.jsonl outputs/phase0_cuad_oracle/results.json"
