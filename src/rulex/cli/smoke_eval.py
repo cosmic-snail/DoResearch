@@ -37,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8").split("\n"):
         if line.strip():
             records.append(validate_ruleframe(json.loads(line)))
     return records
@@ -63,7 +63,7 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+            handle.write(json.dumps(row, ensure_ascii=True) + "\n")
 
 
 def _write_json(path: Path, payload: dict[str, float | int]) -> None:
