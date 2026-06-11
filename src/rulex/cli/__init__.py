@@ -1,1 +1,1 @@
-"""Command-line entry points for experiment setup and smoke checks."""
+"""CLI entry points — data conversion, QA training, LLM extraction, evaluation."""

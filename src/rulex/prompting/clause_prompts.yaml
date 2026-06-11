@@ -1,0 +1,139 @@
+# Clause extraction prompt strategies for LLM experiments.
+#
+# Each strategy defines:
+#   system:        system-level instruction (optional)
+#   user_template: the user message, with {context}, {query}, {examples} placeholders
+#   example_template: per-example format, with {index}, {context}, {query}, {answer}
+#   examples_separator: string between examples (default "\n\n")
+
+strategies:
+
+  # ── Zero-shot: no examples, direct extraction ───────────────────────────
+  zero_shot:
+    system: |
+      You are a legal contract analyst. Your task is to extract EXACT text spans from a contract that answer a question about a specific clause type.
+
+      RULES:
+      1. Copy the text EXACTLY from the contract — do NOT paraphrase, summarize, or modify even a single character.
+      2. If the relevant clause spans multiple sentences, include ALL of them in a single span.
+      3. If the contract contains MULTIPLE distinct clauses of this type, return each as a separate span.
+      4. If the contract does NOT contain this type of clause, set answerable=false and return empty spans.
+      5. Return ONLY valid JSON. No markdown, no explanation outside the JSON.
+
+    user_template: |
+      CONTRACT TEXT:
+      ---
+      {context}
+      ---
+
+      QUESTION: {query}
+
+      Return JSON:
+      {{"answerable": true or false, "spans": [{{"text": "exact text from contract above"}}]}}
+
+  # ── Few-shot with 3 examples ────────────────────────────────────────────
+  few_shot_3:
+    system: |
+      You are a legal contract analyst. Your task is to extract EXACT text spans from a contract that answer a question about a specific clause type.
+
+      RULES:
+      1. Copy the text EXACTLY from the contract — do NOT paraphrase.
+      2. If the clause spans multiple sentences, include ALL of them.
+      3. If MULTIPLE distinct clauses exist, return each as a separate span.
+      4. If the contract does NOT contain this type of clause, set answerable=false, spans=[].
+      5. Return ONLY valid JSON. No markdown, no explanation.
+
+    user_template: |
+      Here are {num_examples} examples of correct extractions (from OTHER contracts):
+
+      {examples}
+
+      Now analyze THIS contract:
+
+      CONTRACT TEXT:
+      ---
+      {context}
+      ---
+
+      QUESTION: {query}
+
+      Return JSON:
+      {{"answerable": true or false, "spans": [{{"text": "exact text from contract above"}}]}}
+
+    example_template: |
+      --- Example {index} ---
+      Contract excerpt: {context}
+      Question: {query}
+      Correct answer span: {answer}
+
+    examples_separator: "\n\n"
+
+  # ── Few-shot with 5 examples ────────────────────────────────────────────
+  few_shot_5:
+    system: |
+      You are a legal contract analyst. Your task is to extract EXACT text spans from a contract that answer a question about a specific clause type.
+
+      RULES:
+      1. Copy the text EXACTLY from the contract — do NOT paraphrase.
+      2. If the clause spans multiple sentences, include ALL of them.
+      3. If MULTIPLE distinct clauses exist, return each as a separate span.
+      4. If the contract does NOT contain this type of clause, set answerable=false, spans=[].
+      5. Return ONLY valid JSON. No markdown, no explanation.
+
+    user_template: |
+      Here are {num_examples} examples of correct extractions (from OTHER contracts):
+
+      {examples}
+
+      Now analyze THIS contract:
+
+      CONTRACT TEXT:
+      ---
+      {context}
+      ---
+
+      QUESTION: {query}
+
+      Return JSON:
+      {{"answerable": true or false, "spans": [{{"text": "exact text from contract above"}}]}}
+
+    example_template: |
+      --- Example {index} ---
+      Contract excerpt: {context}
+      Question: {query}
+      Correct answer span: {answer}
+
+    examples_separator: "\n\n"
+
+  # ── Chain-of-Thought ────────────────────────────────────────────────────
+  chain_of_thought:
+    system: |
+      You are a legal contract analyst. Think step by step before answering.
+
+      STEP 1: Determine whether the contract contains the clause type asked about.
+      STEP 2: If it does, locate the exact text span(s) in the contract.
+      STEP 3: Output the result as JSON.
+
+      RULES:
+      - Copy text EXACTLY — no paraphrasing.
+      - Include multi-sentence clauses in full.
+      - Return multiple spans if there are multiple distinct clauses.
+      - If absent, answerable=false, spans=[].
+      - Output: first your reasoning, then a JSON block on its own line.
+
+    user_template: |
+      CONTRACT TEXT:
+      ---
+      {context}
+      ---
+
+      QUESTION: {query}
+
+      Think step by step:
+      1. Does this contract contain a "{query}" clause?
+      2. If yes, what is the exact text?
+
+      Then output:
+      ```json
+      {{"answerable": true or false, "spans": [{{"text": "exact text"}}]}}
+      ```

@@ -4,7 +4,64 @@
 > **核心 Pipeline**：`营养指南PDF → LLM/规则抽取 → 结构化规则 → 饮食推荐系统`  
 > **关联研究方向**：IE 中的 Rule Extraction + Canonicalization + Neuro-Symbolic + Domain Transfer  
 > **创建日期**：2026-06-09  
+> **ScholarAIO 工作区**：`C:\Users\56501\scholaraio`
 
+---
+
+## 一、当前环境
+
+| 组件 | 状态 |
+|------|------|
+| Python 3.12.10 | ✅ |
+| ScholarAIO v1.5.0 | ✅ (editable install) |
+| torch 2.12.0 (CPU) | ✅ |
+| sentence-transformers | ✅ |
+| bertopic + faiss + pandas | ✅ |
+| 嵌入模型 | `all-MiniLM-L6-v2` (dim=384) |
+| 存放路径 | `C:\Users\56501\scholaraio` |
+
+### 启动命令备忘
+
+```bash
+# 设置环境变量
+export PATH="/c/Users/56501/AppData/Local/Programs/Python/Python312/Scripts:$PATH"
+export HF_TOKEN=<your_hf_token>
+cd C:\Users\56501\scholaraio
+
+# 语义搜索
+scholaraio explore search --name <库名> "查询文本"
+
+# 关键词搜索
+scholaraio explore search --name <库名> "查询文本" --mode keyword
+
+# 列出所有库
+scholaraio explore list
+```
+
+**重要**：`config.local.yaml` 中已配置 `all-MiniLM-L6-v2` 作为嵌入模型。
+
+---
+
+## 二、已构建的论文库（6 个探索库，3300 篇）
+
+| 库名 | 篇数 | 向量数 | 覆盖方向 | 查询关键词 |
+|------|------|--------|---------|-----------|
+| `ie-foundation` | 800 | 623 | IE 全领域 (OpenAlex concept C195807954) | — |
+| `openie` | 500 | 482 | Open Information Extraction | `open information extraction` |
+| `rule-induction` | 500 | 465 | 规则归纳/挖掘 | `rule induction text mining extraction` |
+| `neuro-symbolic` | 500 | 466 | 神经符号规则提取 | `neural symbolic rule extraction natural language` |
+| `kb-construction` | 500 | 470 | 知识库构建、规则→结构化编码 | `knowledge base construction rule extraction text` |
+| `relation-extract` | 500 | 458 | 关系抽取+规则模式 | `relation extraction pattern rule bootstrapping` |
+
+**数据存储**：`C:\Users\56501\scholaraio\data\libraries\explore\<库名>\`
+
+每个库包含：
+- `papers.jsonl` — 论文元数据
+- `explore.db` — SQLite 向量库（`paper_vectors` 表）
+- `faiss.index` — FAISS 语义搜索索引
+- `faiss_ids.json` — 论文 ID 映射
+
+---
 
 ## 三、2026 研究方向全景
 

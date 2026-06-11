@@ -3,6 +3,12 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 _TOKEN_RE = re.compile(r"\b\w+\b")
+_NUMERIC_UNIT_RE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(%|percent|dollars?|\$\s*\d+(?:\.\d+)?|days?|years?|months?|weeks?|hours?)\b",
+    re.IGNORECASE,
+)
+# also match standalone "$1,234" style
+_DOLLAR_RE = re.compile(r"\$\s*([\d,]+(?:\.\d+)?)")
 
 
 def token_iou(gold_text: str, predicted_text: str) -> float:
@@ -43,6 +49,77 @@ def boundary_f1(
     return max(_span_boundary_f1(gold, predicted) for gold in gold_spans for predicted in predicted_spans)
 
 
+# ── Patch 1: Multi-Span Recall ──────────────────────────────────────────────
+
+def multi_span_recall(
+    gold_spans: Sequence[Mapping[str, Any]],
+    predicted_spans: Sequence[Mapping[str, Any]],
+    iou_threshold: float = 0.5,
+) -> float:
+    """Fraction of *gold_spans* matched by at least one prediction with IoU >= threshold.
+
+    Unlike ``_best_token_f1`` which only looks at the single best overlap,
+    this metric penalises systems that find only 1 of N required spans.
+    """
+    if not gold_spans:
+        return 1.0
+    if not predicted_spans:
+        return 0.0
+    hits = 0
+    for gold in gold_spans:
+        for pred in predicted_spans:
+            if token_iou(str(gold.get("text", "")), str(pred.get("text", ""))) >= iou_threshold:
+                hits += 1
+                break
+    return hits / len(gold_spans)
+
+
+# ── Patch 2: Numeric Match ──────────────────────────────────────────────────
+
+def numeric_match(
+    gold_spans: Sequence[Mapping[str, Any]],
+    predicted_spans: Sequence[Mapping[str, Any]],
+) -> float:
+    """Fraction of gold *(value, unit)* pairs that appear verbatim in predictions.
+
+    Each "(value, unit)" pair must match exactly (same digits + same normalised unit).
+    Returns 1.0 when gold contains no numeric content (trivially correct).
+    """
+    gold_pairs = _extract_numeric_pairs(
+        " ".join(str(s.get("text", "")) for s in gold_spans)
+    )
+    if not gold_pairs:
+        return 1.0
+    pred_pairs = _extract_numeric_pairs(
+        " ".join(str(s.get("text", "")) for s in predicted_spans)
+    )
+    hits = len(gold_pairs & pred_pairs)
+    return hits / len(gold_pairs)
+
+
+def _extract_numeric_pairs(text: str) -> set[tuple[str, str]]:
+    """Extract normalised (value, unit) pairs from *text*."""
+    pairs: set[tuple[str, str]] = set()
+
+    # value+unit pairs: "30 days", "0.5%", "5%", etc.
+    for m in _NUMERIC_UNIT_RE.finditer(text):
+        value = m.group(1)
+        unit = m.group(2).lower().strip()
+        if unit in ("percent",):
+            unit = "%"
+        if unit.startswith("dollar") or unit.startswith("$"):
+            value = m.group(1).replace(",", "")
+            unit = "$"
+        pairs.add((value, unit))
+
+    # standalone dollar amounts: "$1,234"
+    for m in _DOLLAR_RE.finditer(text):
+        value = m.group(1).replace(",", "")
+        pairs.add((value, "$"))
+
+    return pairs
+
+
 def evaluate_span_predictions(
     records: Sequence[Mapping[str, Any]],
     predictions: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]],
@@ -53,11 +130,15 @@ def evaluate_span_predictions(
     exact_scores: list[float] = []
     f1_scores: list[float] = []
     boundary_scores: list[float] = []
+    msr_scores: list[float] = []
+    nm_scores: list[float] = []
     for record in answerable_records:
         predicted_spans = predictions.get((record["doc_id"], record["rule_type"]), [])
         exact_scores.append(_best_exact(record["gold_spans"], predicted_spans))
         f1_scores.append(_best_token_f1(record["gold_spans"], predicted_spans))
         boundary_scores.append(boundary_f1(record["gold_spans"], predicted_spans))
+        msr_scores.append(multi_span_recall(record["gold_spans"], predicted_spans))
+        nm_scores.append(numeric_match(record["gold_spans"], predicted_spans))
 
     no_answer_hits = 0
     for record in no_answer_records:
@@ -72,6 +153,8 @@ def evaluate_span_predictions(
         "exact_match": _mean(exact_scores),
         "token_f1": _mean(f1_scores),
         "boundary_f1": _mean(boundary_scores),
+        "multi_span_recall": _mean(msr_scores),
+        "numeric_match": _mean(nm_scores),
         "average_precision": _average_precision(records, predictions),
         "no_answer_accuracy": no_answer_hits / len(no_answer_records) if no_answer_records else 0.0,
     }

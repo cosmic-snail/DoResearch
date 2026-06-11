@@ -1,1 +1,1 @@
-"""Model helpers and baseline runners."""
+"""Model helpers — extractive QA training, LLM-based extraction."""

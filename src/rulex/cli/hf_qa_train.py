@@ -54,6 +54,10 @@ def train_hf_qa_baseline(args: argparse.Namespace) -> dict[str, Any]:
         eval_strategy="no",
         report_to="none",
         use_cpu=args.device == "cpu",
+        fp16=args.fp16,
+        gradient_checkpointing=args.gradient_checkpointing,
+        dataloader_num_workers=0,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
         seed=args.seed,
     )
     trainer = Trainer(
@@ -143,7 +147,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-steps", type=int, default=-1)
     parser.add_argument("--device", choices=["auto", "cpu"], default="auto")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--fp16", action="store_true", default=False,
+                        help="Enable mixed-precision training (recommended for 6GB VRAM)")
+    parser.add_argument("--gradient-checkpointing", action="store_true", default=False,
+                        help="Trade compute for memory (recommended for limited VRAM)")
+    parser.add_argument("--gradient-accumulation-steps", type=int, default=1,
+                        help="Accumulate gradients over N steps (effective batch = batch_size * N)")
     args = parser.parse_args(argv)
+
+    # Auto-enable fp16 on CUDA devices
+    if args.device == "auto" and args.fp16 is False:
+        import torch
+        if torch.cuda.is_available():
+            args.fp16 = True
+            print("[auto] fp16 enabled (CUDA detected)")
 
     metrics = train_hf_qa_baseline(args)
     print(json.dumps(metrics, indent=2, sort_keys=True))
