@@ -232,26 +232,30 @@
 
 Judge 准确识别了 overshoot 和错误 span，验证了 LLM-as-Judge 作为定性评估工具的可行性。
 
-### 3.6 RoBERTa 训练状态
+### 3.6 RoBERTa-base 对比（社区 Checkpoint）
 
-| 指标 | 值 |
-|------|:--|
-| 模型 | roberta-base |
-| 训练数据 | 22,450 条（1,103,745 个 QA features） |
-| 评估数据 | 4,182 条（140,359 个 QA features） |
-| Max Seq Length | 512 |
-| Doc Stride | 128 |
-| Batch Size | 16 |
-| Epochs | 2 |
-| 总步数 | 137,970 |
-| 训练耗时 | 31 小时 14 分 |
-| 训练 Loss | 0.057 |
-| 评估 Loss | 0.037 |
-| 设备 | RTX 3060 6GB (fp16) |
-| PyTorch | 2.11.0+cu128 |
-| 模型保存 | ❌ 未保存（`save_strategy="no"`） |
+使用 HuggingFace 社区 fine-tuned checkpoint `Rakib/roberta-base-on-cuad`（RobertaForQuestionAnswering，9 likes）在 test 集上推理（55 分钟，RTX 3060）。因 extractive QA 模型仅能预测单 span，做了三轮不同配置：
 
-**CUAD 论文参考**：roberta-base 在 CUAD 上的 reported AUPR = 44.6（详见 [CUAD paper](https://arxiv.org/abs/2103.06268)）。
+| 轮次 | 配置 | Token F1 | MSR | Exact | No-Ans Acc | Answers |
+|:--:|------|:------:|:---:|:-----:|:--------:|:--:|
+| R1 | 多 span（跨窗口收集）| 0.086 | — | — | — | 100% |
+| R2 | 单 span + CLS 阈值 | 0.226 | 0.215 | — | **0.970** | 13.1% |
+| R3 | 单 span，无 CLS 阈值 | **0.300** | 0.260 | 0.193 | 0.000 | 100% |
+
+RoBERTa 在单 span 约束下存在固有的 precision-recall 两难：有阈值时 No-Answer 极好但漏掉答案（Token F1 低），无阈值时覆盖率高但无法区分无答案场景。
+
+### 3.7 最终对比：RoBERTa vs LLM
+
+| 指标 | Null基线 | RoBERTa (R3) | **LLM few-shot-3** |
+|------|:------:|:----------:|:------:|
+| Token F1 | 0.000 | 0.300 | **0.654** |
+| Multi-Span Recall | 0.000 | 0.260 | **0.535** |
+| Exact Match | 0.000 | 0.193 | **0.260** |
+| No-Answer Accuracy | 0.701 | 0.000 | **0.881** |
+| 训练数据 | 无 | 22K 标注样本 | **3 个示例** |
+| 推理耗时 | — | 55 min (GPU) | 131 min (API) |
+
+> **注**：社区 checkpoint 可能未达到 CUAD 论文报告的 roberta-base 水平（AUPR 44.6）。官方 checkpoint 需要从 Atticus Project 获取（非 HuggingFace Hub）。此外，extractive QA 的**单 span 设计**与 CUAD 多 span 标注（如 Parties 类型多达 6 个 gold span）存在架构级不匹配，LLM 的多 span 自由输出在此任务上具有天然优势。
 
 ---
 
@@ -293,22 +297,24 @@ Judge 准确识别了 overshoot 和错误 span，验证了 LLM-as-Judge 作为�
 
 ### 5.1 当前局限
 
-1. **RoBERTa 对比缺失**：模型训练已收敛但未保存，无法进行 LLM vs Fine-tuned 的直接对比
+1. **RoBERTa checkpoint 质量存疑**：社区模型 `Rakib/roberta-base-on-cuad` 的表现（Token F1=0.30）低于 CUAD 论文报告水平（AUPR 44.6）。官方 checkpoint 需从 Atticus Project 获取，或自行训练（已确认训练代码可行，31h 收敛，但模型未保存）
 2. **Zero-shot 全量缺失**：Phase 2 仅跑了 few_shot_3，缺少 zero_shot 全量对比
-3. **CoT 变量未穷尽**：仅测试了一种 CoT prompt，可能不是最优设计
-4. **单一模型**：所有 LLM 实验仅使用 deepseek-chat，缺少跨模型泛化验证
-5. **MULTI 分支数据不足**：CUAD 中真正的多片段类型较少，逻辑树的 MULTI 分支未充分覆盖
+3. **Extractive QA 架构限制**：RoBERTa 单 span 设计无法处理多片段答案（CUAD 中 Parties 类型多达 6 个 gold span），这是架构级不匹配
+4. **CoT 变量未穷尽**：仅测试了一种 CoT prompt，可能不是最优设计
+5. **单一模型**：所有 LLM 实验仅使用 deepseek-chat，缺少跨模型泛化验证
+6. **MULTI 分支数据不足**：CUAD 中真正的多片段类型较少，逻辑树的 MULTI 分支未充分覆盖
+7. **上下文截断**：RoBERTa 推理时将长文档截断至 25K 字符，可能丢失尾部关键信息
 
 ### 5.2 待执行实验
 
 | 优先级 | 实验 | 预计耗时 | 产出 |
 |:--:|------|:--:|------|
-| 🔴 | RoBERTa 重训 + 推理（保存模型） | ~32h | LLM vs RoBERTa 对比表 |
+| 🔴 | 获取/训练官方 RoBERTa checkpoint | 31h | 可对标论文的 RoBERTa 基线 |
 | 🔴 | Zero-shot 全量评估 | ~2h | Zero-shot vs Few-shot 全量对比 |
-| 🟡 | LLM-as-Judge 全量（32 条） | ~5min | 定性证据补充 |
-| 🟡 | Cross-Type 泛化（9 holdout splits） | ~6h | 跨类型泛化分析 |
-| 🟢 | 多模型对比（GPT-4o / Claude） | ~4h | 跨模型泛化验证 |
-| 🟢 | 营养指南冷启动（1 份 PDF） | ~3 天 | 领域迁移可行性 |
+| 🟡 | LLM-as-Judge 全量（32+ 条）| ~5min | 定性证据补充 |
+| 🟡 | Cross-Type 泛化（9 holdout splits）| ~6h | 跨类型泛化分析 |
+| 🟢 | 多模型对比（GPT-4o / Claude）| ~4h | 跨模型泛化验证 |
+| 🟢 | 营养指南冷启动（1 份 PDF）| ~3 天 | 领域迁移可行性 |
 
 ### 5.3 论文叙事建议
 
@@ -350,6 +356,8 @@ outputs/
 ├── phase1_roberta_base/
 │   ├── full_train.log     (39.5 MB — 完整训练日志)
 │   └── train_metrics.json (训练/评估 loss)
+├── phase1_roberta_infer/
+│   └── predictions.jsonl  (4,182 条 RoBERTa 预测)
 └── llm_judge_smoke/
     ├── judge_verdicts.jsonl
     └── judge_summary.json
