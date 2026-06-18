@@ -1,0 +1,10 @@
+{
+  "answerable_records": 1244,
+  "average_precision": 0.0,
+  "boundary_f1": 0.0,
+  "exact_match": 0.0,
+  "no_answer_accuracy": 1.0,
+  "no_answer_records": 2938,
+  "records": 4182,
+  "token_f1": 0.0
+}

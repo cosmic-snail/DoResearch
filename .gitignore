@@ -17,7 +17,7 @@ data/processed/
 outputs/
 runs/
 checkpoints/
-models/
+/models/
 
 # Local worktrees
 .worktrees/
@@ -27,3 +27,7 @@ worktrees/
 .DS_Store
 .idea/
 .vscode/
+
+# Session logs (may contain tokens)
+历史会话.md
+models/

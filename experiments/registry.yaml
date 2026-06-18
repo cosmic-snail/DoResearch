@@ -1,0 +1,131 @@
+experiments:
+  phase0_smoke:
+    description: "Convert CUAD-style JSON into RuleFrame JSONL and run oracle smoke evaluation."
+    input: "examples/cuad_sample.json"
+    ruleframe_output: "outputs/phase0_smoke/cuad_sample.ruleframe.jsonl"
+    summary_output: "outputs/phase0_smoke/summary.json"
+    predictions_output: "outputs/phase0_smoke/predictions.jsonl"
+    results_output: "outputs/phase0_smoke/results.json"
+    commands:
+      convert: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe examples/cuad_sample.json outputs/phase0_smoke/cuad_sample.ruleframe.jsonl"
+      summarize: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes outputs/phase0_smoke/cuad_sample.ruleframe.jsonl outputs/phase0_smoke/summary.json"
+      smoke_eval: "PYTHONPATH=src python3 -m rulex.cli.smoke_eval outputs/phase0_smoke/cuad_sample.ruleframe.jsonl outputs/phase0_smoke/predictions.jsonl outputs/phase0_smoke/results.json"
+  phase0_cuad_full:
+    description: "Convert the official CUADv1.json into RuleFrame JSONL and summarize the full corpus."
+    input: "data/raw/cuad/CUADv1.json"
+    ruleframe_output: "data/processed/ruleframe/cuad.jsonl"
+    summary_output: "reports/tables/phase0_cuad_summary.json"
+    predictions_output: "outputs/phase0_cuad_oracle/predictions.jsonl"
+    results_output: "outputs/phase0_cuad_oracle/results.json"
+    commands:
+      convert: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe data/raw/cuad/CUADv1.json data/processed/ruleframe/cuad.jsonl"
+      summarize: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes data/processed/ruleframe/cuad.jsonl reports/tables/phase0_cuad_summary.json"
+      oracle_smoke_eval: "PYTHONPATH=src python3 -m rulex.cli.smoke_eval data/processed/ruleframe/cuad.jsonl outputs/phase0_cuad_oracle/predictions.jsonl outputs/phase0_cuad_oracle/results.json"
+  phase1_cuad_split_diagnostics:
+    description: "Prepare official CUAD train/test splits and write per-rule-type difficulty profiles."
+    train_input: "data/raw/cuad/train_separate_questions.json"
+    test_input: "data/raw/cuad/test.json"
+    train_ruleframe_output: "data/processed/ruleframe/cuad_train.jsonl"
+    test_ruleframe_output: "data/processed/ruleframe/cuad_test.jsonl"
+    train_summary_output: "reports/tables/phase1_cuad_train_summary.json"
+    test_summary_output: "reports/tables/phase1_cuad_test_summary.json"
+    train_profile_output: "reports/tables/phase1_cuad_train_rule_type_profile.csv"
+    test_profile_output: "reports/tables/phase1_cuad_test_rule_type_profile.csv"
+    commands:
+      convert_train: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe data/raw/cuad/train_separate_questions.json data/processed/ruleframe/cuad_train.jsonl"
+      convert_test: "PYTHONPATH=src python3 -m rulex.cli.cuad_to_ruleframe data/raw/cuad/test.json data/processed/ruleframe/cuad_test.jsonl"
+      summarize_train: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes data/processed/ruleframe/cuad_train.jsonl reports/tables/phase1_cuad_train_summary.json"
+      summarize_test: "PYTHONPATH=src python3 -m rulex.cli.summarize_ruleframes data/processed/ruleframe/cuad_test.jsonl reports/tables/phase1_cuad_test_summary.json"
+      profile_train: "PYTHONPATH=src python3 -m rulex.cli.profile_rule_types data/processed/ruleframe/cuad_train.jsonl reports/tables/phase1_cuad_train_rule_type_profile.csv"
+      profile_test: "PYTHONPATH=src python3 -m rulex.cli.profile_rule_types data/processed/ruleframe/cuad_test.jsonl reports/tables/phase1_cuad_test_rule_type_profile.csv"
+  phase1_null_baseline:
+    description: "Always predict no spans on the CUAD test split to calibrate no-answer behavior."
+    input: "data/processed/ruleframe/cuad_test.jsonl"
+    predictions_output: "outputs/phase1_null_baseline_test/predictions.jsonl"
+    results_output: "reports/tables/phase1_null_baseline_test_results.json"
+    commands:
+      run: "PYTHONPATH=src python3 -m rulex.cli.null_baseline data/processed/ruleframe/cuad_test.jsonl outputs/phase1_null_baseline_test/predictions.jsonl reports/tables/phase1_null_baseline_test_results.json"
+  phase1_hf_qa_smoke:
+    description: "One-step HuggingFace QA training smoke test with a tiny RoBERTa model."
+    train_input: "data/processed/ruleframe/cuad_train.jsonl"
+    eval_input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/phase1_hf_qa_smoke"
+    metrics_output: "reports/model_runs/phase1_hf_qa_smoke_metrics.json"
+    commands:
+      run: "PYTHONPATH=src python3 -m rulex.cli.hf_qa_train --train data/processed/ruleframe/cuad_train.jsonl --eval data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/phase1_hf_qa_smoke --model-name hf-internal-testing/tiny-random-roberta --max-train-records 4 --max-eval-records 2 --max-seq-length 128 --doc-stride 32 --batch-size 2 --max-steps 1 --device cpu"
+  phase1_roberta_base_train:
+    description: "Full RoBERTa-base extractive QA training command for CUAD; expected to require substantial compute."
+    train_input: "data/processed/ruleframe/cuad_train.jsonl"
+    eval_input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/phase1_roberta_base"
+    commands:
+      run: "PYTHONPATH=src python3 -m rulex.cli.hf_qa_train --train data/processed/ruleframe/cuad_train.jsonl --eval data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/phase1_roberta_base --model-name roberta-base --max-seq-length 512 --doc-stride 128 --batch-size 16 --learning-rate 3e-5 --epochs 2 --device auto"
+
+  # ── RTX 3060 GPU training variants ──────────────────────────────────────
+  phase1_roberta_base_gpu:
+    description: "RoBERTa-base training on RTX 3060 6GB with fp16+gradient checkpointing."
+    train_input: "data/processed/ruleframe/cuad_train.jsonl"
+    eval_input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/phase1_roberta_base"
+    commands:
+      # Primary: fp16 by default (auto-detected on CUDA), gradient checkpointing for safety
+      run_fp16_gc: "PYTHONPATH=src python3 -m rulex.cli.hf_qa_train --train data/processed/ruleframe/cuad_train.jsonl --eval data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/phase1_roberta_base --model-name roberta-base --max-seq-length 512 --doc-stride 128 --batch-size 16 --learning-rate 3e-5 --epochs 2 --device auto --fp16 --gradient-checkpointing"
+      # Conservative: fp16 only, smaller batch
+      run_fp16_bs8: "PYTHONPATH=src python3 -m rulex.cli.hf_qa_train --train data/processed/ruleframe/cuad_train.jsonl --eval data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/phase1_roberta_base --model-name roberta-base --max-seq-length 512 --doc-stride 128 --batch-size 8 --learning-rate 3e-5 --epochs 2 --device auto --fp16 --gradient-checkpointing --gradient-accumulation-steps 2"
+      # Benchmark: 100 steps to measure speed
+      benchmark: "PYTHONPATH=src python3 -m rulex.cli.hf_qa_train --train data/processed/ruleframe/cuad_train.jsonl --eval data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/phase1_benchmark --model-name roberta-base --max-seq-length 512 --doc-stride 128 --batch-size 16 --learning-rate 3e-5 --max-steps 100 --device auto --fp16 --gradient-checkpointing"
+
+  # ── LLM Phase 1: Infrastructure + Prompt Screening ─────────────────────
+  llm_phase1_smoke:
+    description: "Smoke-test the LLM extraction pipeline on 3 records with DeepSeek."
+    input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/llm_phase1_smoke"
+    commands:
+      zero_shot: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/llm_phase1_smoke/zero_shot --prompt-strategy zero_shot --model deepseek-chat --max-records 3 --verbose"
+      few_shot_3: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --train data/processed/ruleframe/cuad_train.jsonl --output-dir outputs/llm_phase1_smoke/few_shot_3 --prompt-strategy few_shot_3 --model deepseek-chat --max-records 3 --verbose"
+
+  llm_phase1_prompt_screening:
+    description: "Compare 4 prompt strategies on a 30-contract subset to select top-2 strategies."
+    input: "data/processed/ruleframe/cuad_test.jsonl"
+    train: "data/processed/ruleframe/cuad_train.jsonl"
+    output_dir: "outputs/llm_phase1_prompt_screening"
+    commands:
+      zero_shot: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/llm_phase1_prompt_screening/zero_shot --prompt-strategy zero_shot --model deepseek-chat --max-records 1230 --verbose"
+      few_shot_3: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --train data/processed/ruleframe/cuad_train.jsonl --output-dir outputs/llm_phase1_prompt_screening/few_shot_3 --prompt-strategy few_shot_3 --model deepseek-chat --max-records 1230 --verbose"
+      few_shot_5: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --train data/processed/ruleframe/cuad_train.jsonl --output-dir outputs/llm_phase1_prompt_screening/few_shot_5 --prompt-strategy few_shot_5 --model deepseek-chat --max-records 1230 --verbose"
+      chain_of_thought: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/llm_phase1_prompt_screening/cot --prompt-strategy chain_of_thought --model deepseek-chat --max-records 1230 --verbose"
+
+  # ── LLM Phase 2: Full Comparison + RAG ─────────────────────────────────
+  llm_phase2_full_comparison:
+    description: "Full test-set comparison: top prompt strategies x multiple models."
+    notes: |
+      Run the best 2 prompt strategies on the complete 4182-record test set.
+      Models: deepseek-chat (primary), plus optional GPT-4o / Claude.
+      Compare against RoBERTa-base baseline when training completes.
+    input: "data/processed/ruleframe/cuad_test.jsonl"
+    train: "data/processed/ruleframe/cuad_train.jsonl"
+    output_dir: "outputs/llm_phase2_full_comparison"
+    commands:
+      deepseek_zero_shot: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/llm_phase2_full_comparison/deepseek_zero_shot --prompt-strategy zero_shot --model deepseek-chat --verbose"
+      deepseek_few_shot: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --train data/processed/ruleframe/cuad_train.jsonl --output-dir outputs/llm_phase2_full_comparison/deepseek_few_shot --prompt-strategy few_shot_3 --model deepseek-chat --verbose"
+
+  # ── LLM Phase 3: Cross-Type + Query Sensitivity ────────────────────────
+  llm_phase3_cross_type:
+    description: "Test LLM zero-shot generalization to held-out clause types."
+    notes: |
+      Requires a cross-type holdout split JSONL (to be generated by a split script).
+      Compares zero-shot LLM vs few-shot LLM on unseen rule types.
+    input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/llm_phase3_cross_type"
+    commands:
+      zero_shot: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/llm_phase3_cross_type/zero_shot --prompt-strategy zero_shot --model deepseek-chat --verbose"
+
+  llm_phase3_query_sensitivity:
+    description: "Test LLM sensitivity to different query formulations."
+    notes: |
+      Compare original CUAD long question vs short keyword query vs schema-style query.
+      Use the same model and strategy, vary only the query field in the input JSONL.
+    input: "data/processed/ruleframe/cuad_test.jsonl"
+    output_dir: "outputs/llm_phase3_query_sensitivity"
+    commands:
+      original: "PYTHONPATH=src python3 -m rulex.cli.llm_extract --input data/processed/ruleframe/cuad_test.jsonl --output-dir outputs/llm_phase3_query_sensitivity/original --prompt-strategy zero_shot --model deepseek-chat --max-records 410 --verbose"
